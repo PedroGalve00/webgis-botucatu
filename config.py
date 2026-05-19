@@ -21,7 +21,7 @@ PROJETO = {
         },
         {
             "nome":    "Uso do Solo (MapBiomas)",
-            "id_gee":  "projects/mapbiomas-workspace/public/collection8/mapbiomas_collection80_integration_v1",
+            "id_gee":  "projects/mapbiomas-public/assets/brazil/lulc/collection9/mapbiomas_collection90_integration_v1",
             "tipo":    "mapbiomas",
             "palette": ["#1f8d49","#7dc975","#FFFFB2","#d6bc74","#e31a1c","#2577a1"],
             "min": 1,
