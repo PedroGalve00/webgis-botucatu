@@ -25,7 +25,13 @@ def carregar_camada(config_camada, ano):
         vmax    = str(config_camada.get("max", 1))
         vis     = {"min": vmin, "max": vmax, "palette": ",".join(palette)}
 
-        if tipo == "asset":
+        if tipo == "mapbiomas":
+            # MapBiomas: limita o ano ao máximo disponível (2023)
+            ano_uso = min(ano, config_camada.get("ano_max", 2023))
+            banda   = f"classification_{ano_uso}"
+            image   = ee.Image(id_gee).select(banda)
+
+        elif tipo == "asset":
             banda = config_camada.get("banda")
             image = ee.Image(id_gee)
             if banda:
@@ -59,12 +65,13 @@ def carregar_camada(config_camada, ano):
 
 def calcular_serie_temporal(config_camada, ano_inicio, ano_fim, lat, lon):
     try:
+        tipo   = config_camada.get("tipo")
         id_gee = config_camada["id_gee"]
         indice = config_camada.get("indice")
-        tipo   = config_camada.get("tipo")
         ponto  = ee.Geometry.Point([lon, lat])
 
-        if tipo == "asset":
+        # Assets e mapbiomas não têm série temporal dinâmica
+        if tipo in ("asset", "mapbiomas"):
             return None
 
         registros = []

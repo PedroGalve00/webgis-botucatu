@@ -2,5 +2,5 @@ from datetime import date
 
 def calcular_metrica(nome, ano):
     if nome == "data_hoje":
-        return date.today().strftime("%d/%m/%Y")
+        return str(ano)   # mostra o ano selecionado, não a data atual
     return "—"
