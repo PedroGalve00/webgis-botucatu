@@ -55,7 +55,7 @@ with st.sidebar:
         st.rerun()
 
 st.markdown(f'<p class="titulo">{PROJETO["nome"]}</p>', unsafe_allow_html=True)
-st.caption(f"Ano: {ano}  ·  Atualizado em: {date.today().strftime('%d/%m/%Y')}")
+st.caption(f"Ano: {ano}  ·  Dados de: {ano}")
 st.markdown("")
 
 cols = st.columns(len(PROJETO["metricas"]))
@@ -76,7 +76,8 @@ with col_mapa:
         image, vis = carregar_camada(cfg, ano)
         if image is None:
             return None
-        map_id = ee.data.getMapId({**vis, "image": image})
+        # Nova forma correta de pegar tile URL
+        map_id = image.getMapId(vis)
         return map_id["tile_fetcher"].url_format
 
     with st.spinner("Carregando GEE..."):
