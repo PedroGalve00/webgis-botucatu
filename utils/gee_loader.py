@@ -21,9 +21,9 @@ def carregar_camada(config_camada, ano):
         tipo    = config_camada.get("tipo", "colecao")
         id_gee  = config_camada["id_gee"]
         palette = config_camada.get("palette", [])
-        vmin    = config_camada.get("min", 0)
-        vmax    = config_camada.get("max", 1)
-        vis     = {"min": vmin, "max": vmax, "palette": palette}
+        vmin    = str(config_camada.get("min", 0))
+        vmax    = str(config_camada.get("max", 1))
+        vis     = {"min": vmin, "max": vmax, "palette": ",".join(palette)}
 
         if tipo == "asset":
             banda = config_camada.get("banda")
@@ -40,7 +40,6 @@ def carregar_camada(config_camada, ano):
                 .map(lambda img: calcular_indice(img, indice))
                 .median()
             )
-            vis["bands"] = [indice]
 
         elif tipo == "colecao":
             bandas = config_camada.get("bandas", ["B4", "B3", "B2"])
