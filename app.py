@@ -3,6 +3,7 @@ import ee
 import folium
 from streamlit_folium import st_folium
 import plotly.express as px
+import plotly.graph_objects as go
 import geopandas as gpd
 import os
 from datetime import date
@@ -76,19 +77,16 @@ with col_mapa:
         image, vis = carregar_camada(cfg, ano)
         if image is None:
             return None
-        # Nova forma correta de pegar tile URL
         map_id = image.getMapId(vis)
         return map_id["tile_fetcher"].url_format
 
     with st.spinner("Carregando GEE..."):
         tile_url = get_tile_url(camada_sel, ano)
-
         m = folium.Map(
             location=[PROJETO["centro_lat"], PROJETO["centro_lon"]],
             zoom_start=PROJETO["zoom_inicial"],
             tiles="CartoDB positron"
         )
-
         if tile_url:
             folium.TileLayer(
                 tiles=tile_url,
@@ -96,20 +94,20 @@ with col_mapa:
                 name=camada_sel,
                 overlay=True,
             ).add_to(m)
-
         if os.path.exists(PROJETO["geojson_area"]):
             gdf = gpd.read_file(PROJETO["geojson_area"])
             folium.GeoJson(
-                gdf,
-                name="Área de estudo",
+                gdf, name="Área de estudo",
                 style_function=lambda x: {"color": cor, "fillOpacity": 0.05}
             ).add_to(m)
-
         folium.LayerControl().add_to(m)
         st_folium(m, height=460, use_container_width=True)
 
 with col_graf:
-    st.markdown("##### 📈 Série temporal")
+    cfg_atual = next(c for c in PROJETO["camadas"] if c["nome"] == camada_sel)
+    eh_mapbiomas = cfg_atual.get("tipo") == "mapbiomas"
+
+    st.markdown("##### 📊 Uso do solo por ano (ha)" if eh_mapbiomas else "##### 📈 Série temporal")
 
     @st.cache_data(ttl=PROJETO["cache_horas"] * 3600)
     def get_serie(nome):
@@ -120,21 +118,57 @@ with col_graf:
             PROJETO["centro_lat"], PROJETO["centro_lon"]
         )
 
-    with st.spinner("Calculando..."):
+    with st.spinner("Calculando... (pode levar 1-2 min na primeira vez)"):
         df = get_serie(camada_sel)
 
     if df is not None and not df.empty:
-        fig = px.line(df, x="ano", y="valor", markers=True,
-                      color_discrete_sequence=[cor],
-                      labels={"ano": "Ano", "valor": camada_sel})
-        fig.update_layout(plot_bgcolor="white", paper_bgcolor="white",
-                          margin=dict(l=10,r=10,t=10,b=10), showlegend=False)
-        fig.add_vrect(x0=ano-.1, x1=ano+.1, fillcolor=cor, opacity=0.15, line_width=0)
-        st.plotly_chart(fig, use_container_width=True)
-        st.dataframe(df.rename(columns={"ano":"Ano","valor":camada_sel}),
-                     use_container_width=True, hide_index=True)
+        if eh_mapbiomas:
+            # Gráfico de área empilhada com cores oficiais MapBiomas
+            classes = df["classe"].unique()
+            cores   = {row["classe"]: row["cor"] for _, row in df.drop_duplicates("classe").iterrows()}
+
+            # Filtra as 8 maiores classes para não poluir o gráfico
+            top_classes = (
+                df.groupby("classe")["area_ha"].mean()
+                .sort_values(ascending=False)
+                .head(8).index.tolist()
+            )
+            df_top = df[df["classe"].isin(top_classes)]
+
+            fig = px.bar(
+                df_top, x="ano", y="area_ha",
+                color="classe",
+                color_discrete_map=cores,
+                labels={"ano": "Ano", "area_ha": "Área (ha)", "classe": "Classe"},
+                barmode="stack",
+            )
+            fig.update_layout(
+                plot_bgcolor="white", paper_bgcolor="white",
+                margin=dict(l=10, r=10, t=10, b=10),
+                legend=dict(font=dict(size=10), orientation="v"),
+                xaxis=dict(tickmode="linear"),
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+            # Tabela do ano selecionado
+            ano_disp = min(ano, cfg_atual.get("ano_max", 2023))
+            df_ano = df[df["ano"] == ano_disp][["classe","area_ha"]].sort_values("area_ha", ascending=False)
+            df_ano.columns = ["Classe", "Área (ha)"]
+            st.caption(f"Detalhamento — {ano_disp}")
+            st.dataframe(df_ano, use_container_width=True, hide_index=True)
+
+        else:
+            fig = px.line(df, x="ano", y="valor", markers=True,
+                          color_discrete_sequence=[cor],
+                          labels={"ano": "Ano", "valor": camada_sel})
+            fig.update_layout(plot_bgcolor="white", paper_bgcolor="white",
+                              margin=dict(l=10,r=10,t=10,b=10), showlegend=False)
+            fig.add_vrect(x0=ano-.1, x1=ano+.1, fillcolor=cor, opacity=0.15, line_width=0)
+            st.plotly_chart(fig, use_container_width=True)
+            st.dataframe(df.rename(columns={"ano":"Ano","valor":camada_sel}),
+                         use_container_width=True, hide_index=True)
     else:
-        st.info("Série temporal indisponível para essa camada.")
+        st.info("Calculando dados... aguarde e clique em Atualizar.")
 
 st.divider()
-st.caption(f"Dados: Google Earth Engine · {PROJETO['cliente']} · {date.today().year}")
+st.caption(f"Dados: Google Earth Engine · MapBiomas · {PROJETO['cliente']} · {date.today().year}")
