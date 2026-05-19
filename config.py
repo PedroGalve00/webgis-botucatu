@@ -5,7 +5,7 @@ PROJETO = {
     "cor_primaria": "#2E7D32",
     "centro_lat":  -22.88,
     "centro_lon":  -48.44,
-    "zoom_inicial": 10,
+    "zoom_inicial": 11,
     "geojson_area": "assets/area_estudo.geojson",
     "ano_inicio": 2019,
     "ano_fim":    2024,
