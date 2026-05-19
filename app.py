@@ -1,6 +1,7 @@
 import streamlit as st
 import ee
-import geemap.foliumap as geemap
+import folium
+from streamlit_folium import st_folium
 import plotly.express as px
 import geopandas as gpd
 import os
@@ -70,25 +71,41 @@ with col_mapa:
     st.markdown(f"##### 🗺 {camada_sel} — {ano}")
 
     @st.cache_data(ttl=PROJETO["cache_horas"] * 3600)
-    def get_camada(nome, ano):
+    def get_tile_url(nome, ano):
         cfg = next(c for c in PROJETO["camadas"] if c["nome"] == nome)
-        return carregar_camada(cfg, ano)
+        image, vis = carregar_camada(cfg, ano)
+        if image is None:
+            return None
+        map_id = ee.data.getMapId({**vis, "image": image})
+        return map_id["tile_fetcher"].url_format
 
     with st.spinner("Carregando GEE..."):
-        image, vis = get_camada(camada_sel, ano)
-        Map = geemap.Map(
-            center=[PROJETO["centro_lat"], PROJETO["centro_lon"]],
-            zoom=PROJETO["zoom_inicial"]
+        tile_url = get_tile_url(camada_sel, ano)
+
+        m = folium.Map(
+            location=[PROJETO["centro_lat"], PROJETO["centro_lon"]],
+            zoom_start=PROJETO["zoom_inicial"],
+            tiles="CartoDB positron"
         )
-        Map.add_basemap("CartoDB.Positron")
+
+        if tile_url:
+            folium.TileLayer(
+                tiles=tile_url,
+                attr="Google Earth Engine",
+                name=camada_sel,
+                overlay=True,
+            ).add_to(m)
+
         if os.path.exists(PROJETO["geojson_area"]):
             gdf = gpd.read_file(PROJETO["geojson_area"])
-            Map.add_gdf(gdf, layer_name="Área de estudo",
-                        style={"color": cor, "fillOpacity": 0.05})
-        if image is not None:
-            Map.addLayer(image, vis, camada_sel)
-            Map.add_colorbar(vis, label=camada_sel)
-        Map.to_streamlit(height=460)
+            folium.GeoJson(
+                gdf,
+                name="Área de estudo",
+                style_function=lambda x: {"color": cor, "fillOpacity": 0.05}
+            ).add_to(m)
+
+        folium.LayerControl().add_to(m)
+        st_folium(m, height=460, use_container_width=True)
 
 with col_graf:
     st.markdown("##### 📈 Série temporal")
