@@ -1,0 +1,38 @@
+PROJETO = {
+    "nome":         "Monitoramento de Vegetação - Botucatu SP",
+    "cliente":      "Secretaria do Meio Ambiente de Botucatu",
+    "logo":         "assets/logo.png",
+    "cor_primaria": "#2E7D32",
+    "centro_lat":  -22.88,
+    "centro_lon":  -48.44,
+    "zoom_inicial": 10,
+    "geojson_area": "assets/area_estudo.geojson",
+    "ano_inicio": 2019,
+    "ano_fim":    2024,
+    "camadas": [
+        {
+            "nome":    "NDVI (Saúde da Vegetação)",
+            "id_gee":  "COPERNICUS/S2_SR_HARMONIZED",
+            "tipo":    "indice",
+            "indice":  "NDVI",
+            "palette": ["#d73027", "#fee08b", "#1a9850"],
+            "min": -0.1,
+            "max":  0.85,
+        },
+        {
+            "nome":    "Uso do Solo (MapBiomas)",
+            "id_gee":  "projects/mapbiomas-workspace/public/collection8/mapbiomas_collection80_integration_v1",
+            "tipo":    "asset",
+            "banda":   "classification_2023",
+            "palette": ["#1f8d49","#7dc975","#FFFFB2","#d6bc74","#e31a1c","#2577a1"],
+            "min": 1,
+            "max": 49,
+        },
+    ],
+    "metricas": [
+        {"label": "Área total (ha)",    "valor_fixo": 148000},
+        {"label": "Última atualização", "calcular": "data_hoje"},
+    ],
+    "cache_horas": 24,
+    "permitir_relatorio_pdf": True,
+}
